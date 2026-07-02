@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aura Planner & Life Dashboard</title>
+    <!-- Modern Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Alarm Overlay Modal -->
+    <div id="alarmModal" class="modal-overlay hidden">
+        <div class="modal-content glass pop-in">
+            <div class="modal-header">
+                <span class="modal-icon">⏰</span>
+                <h2>Alarm Triggered!</h2>
+            </div>
+            <div class="modal-body">
+                <p id="alarmTaskName" class="alarm-task-title">Task Name Here</p>
+                <p id="alarmTaskTime" class="alarm-task-time">Scheduled for: 12:00 PM</p>
+            </div>
+            <div class="modal-footer">
+                <button id="snoozeAlarmBtn" class="modal-btn snooze-btn">Snooze (5m)</button>
+                <button id="dismissAlarmBtn" class="modal-btn dismiss-btn">Dismiss</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Container -->
+    <div class="dashboard-container">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar glass">
+            <div class="brand">
+                <span class="brand-logo">✨</span>
+                <h1 class="brand-name">AURA</h1>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="tab-tasks">
+                    <span class="nav-icon">📝</span> Tasks
+                </button>
+                <button class="nav-item" data-tab="tab-planner">
+                    <span class="nav-icon">📅</span> Day Planner
+                </button>
+                <button class="nav-item" data-tab="tab-money">
+                    <span class="nav-icon">💰</span> Finance
+                </button>
+                <button class="nav-item" data-tab="tab-fitness">
+                    <span class="nav-icon">🏃</span> Fitness
+                </button>
+                <button class="nav-item" data-tab="tab-habits">
+                    <span class="nav-icon">🔄</span> Habits
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <!-- Notification Banner in sidebar -->
+                <div id="notifBanner" class="sidebar-notif-box">
+                    <p id="notifText">Enable notifications for background alerts.</p>
+                    <button id="enableNotifBtn" class="action-btn-sm">Enable</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Global Header -->
+            <header class="main-header glass">
+                <div class="header-left">
+                    <h2 id="currentTabTitle">Task Dashboard</h2>
+                    <p id="headerDateString" class="header-date">Wednesday, July 1</p>
+                </div>
+                <div class="header-right">
+                    <div class="live-clock" id="liveClock">22:05:00</div>
+                    <button id="primeAudioBtn" class="audio-prime-btn" title="Enable Alarm Sound System">🔊 Audio Ready</button>
+                </div>
+            </header>
+
+            <!-- Screen 1: Tasks Dashboard -->
+            <section id="tab-tasks" class="tab-content active">
+                
+                <!-- Quick Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card glass border-blue">
+                        <div class="stat-icon bg-blue">📁</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="totalCount">0</span>
+                            <span class="stat-label">Total Tasks</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-yellow">
+                        <div class="stat-icon bg-yellow">⏳</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="pendingCount">0</span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-green">
+                        <div class="stat-icon bg-green">✅</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="doneCount">0</span>
+                            <span class="stat-label">Completed</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-red">
+                        <div class="stat-icon bg-red">🚨</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="overdueCount">0</span>
+                            <span class="stat-label">Overdue</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Task & List layout -->
+                <div class="content-grid">
+                    
+                    <!-- Left: Form Card -->
+                    <div class="glass-card">
+                        <h3>Create New Task</h3>
+                        <form id="taskForm">
+                            <div class="input-group">
+                                <label for="taskInput">Task Description</label>
+                                <input type="text" id="taskInput" placeholder="What needs to be done?" required />
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="input-group flex-1">
+                                    <label for="priorityInput">Priority</label>
+                                    <select id="priorityInput">
+                                        <option value="low">🟢 Low Priority</option>
+                                        <option value="medium" selected>🟡 Medium Priority</option>
+                                        <option value="high">🔴 High Priority</option>
+                                    </select>
+                                </div>
+                                <div class="input-group flex-1">
+                                    <label for="dtInput">Due Date & Time</label>
+                                    <input type="datetime-local" id="dtInput" />
+                                </div>
+                            </div>
+
+                            <div class="alarm-settings-card">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="alarmEnabledInput" />
+                                    <span class="checkmark"></span>
+                                    Set Audio Alarm
+                                </label>
+                                <div id="alarmTimeGroup" class="input-group indent-group hidden">
+                                    <label for="alarmOffsetInput">Rings at:</label>
+                                    <select id="alarmOffsetInput">
+                                        <option value="0">At time of event</option>
+                                        <option value="5">5 minutes before</option>
+                                        <option value="15" selected>15 minutes before</option>
+                                        <option value="30">30 minutes before</option>
+                                        <option value="60">1 hour before</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="submit-btn">+ Add Task</button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Task List Card -->
+                    <div class="glass-card flex-2">
+                        <div class="card-header-actions">
+                            <h3>Task List</h3>
+                            <div class="toolbar">
+                                <input type="text" id="searchInput" placeholder="🔍 Search tasks..." class="search-input" />
+                            </div>
+                        </div>
+
+                        <div class="filter-row">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="pending">Pending</button>
+                            <button class="filter-btn" data-filter="done">Completed</button>
+                            <button class="filter-btn" data-filter="overdue">Overdue</button>
+                            <button class="filter-btn" data-filter="high">🔴 High</button>
+                        </div>
+
+                        <ul id="taskList" class="task-list"></ul>
+
+                        <div class="card-footer-buttons">
+                            <button id="clearDoneBtn" class="btn-secondary">🗑 Clear Completed</button>
+                            <button id="clearAllBtn" class="btn-danger">⚠ Clear All</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen 2: Day Planner -->
+            <section id="tab-planner" class="tab-content">
+                <div class="content-grid">
+                    <!-- Left: Day Plan Editor -->
+                    <div class="glass-card">
+                        <h3>Schedule a Time Slot</h3>
+                        <p class="section-desc">Plan hour-by-hour what to do and how to execute it.</p>
+                        
+                        <form id="plannerForm">
+                            <div class="form-row">
+                                <div class="input-group flex-1">
+                                    <label for="planStartInput">Start Time</label>
+                                    <input type="time" id="planStartInput" required />
+                                </div>
+                                <div class="input-group flex-1">
+                                    <label for="planEndInput">End Time</label>
+                                    <input type="time" id="planEndInput" required />
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label for="planWhatInput">What to do?</label>
+                                <input type="text" id="planWhatInput" placeholder="Activity name (e.g. Morning Jog, Coding Session)" required />
+                            </div>
+
+                            <div class="input-group">
+                                <label for="planHowInput">How to do it? (Instructions / Details)</label>
+                                <textarea id="planHowInput" rows="3" placeholder="Specific steps, strategies, or preparations..." required></textarea>
+                            </div>
+
+                            <button type="submit" class="submit-btn">+ Add Plan Slot</button>
+                        </form>
+
+                        <div class="templates-box">
+                            <h4>⚡ Quick Template Auto-Fill</h4>
+                            <div class="template-btns">
+                                <button id="templateWorkdayBtn" class="btn-template">🏢 Standard Workday</button>
+                                <button id="templateWeekendBtn" class="btn-template">🌳 Chill Weekend</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Timeline View -->
+                    <div class="glass-card flex-2">
+                        <div class="card-header-actions">
+                            <h3>Today's Schedule</h3>
+                            <button id="clearDayPlanBtn" class="btn-secondary">Reset Plan</button>
+                        </div>
+
+                        <!-- Schedule Timeline -->
+                        <div id="plannerTimeline" class="timeline">
+                            <!-- Timeline slots will be injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen 3: Money Management -->
+            <section id="tab-money" class="tab-content">
+                <!-- Finance Stats Row -->
+                <div class="stats-grid">
+                    <div class="stat-card glass border-green">
+                        <div class="stat-icon bg-green">💵</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="totalIncomeText">₹0</span>
+                            <span class="stat-label">Income Today</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-red">
+                        <div class="stat-icon bg-red">💸</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="totalExpenseText">₹0</span>
+                            <span class="stat-label">Spent Today</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-blue">
+                        <div class="stat-icon bg-blue">🛡</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="totalSavingsText">₹0</span>
+                            <span class="stat-label">Net Saved Today</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass border-purple">
+                        <div class="stat-icon bg-purple">🎯</div>
+                        <div class="stat-info">
+                            <span class="stat-num" id="savingsTargetText">₹0</span>
+                            <span class="stat-label">Savings Target</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-grid-3">
+                    <!-- Column 1: Config & Transaction logs -->
+                    <div class="glass-card">
+                        <h3>Configuration</h3>
+                        <div class="input-group">
+                            <label for="savingsTargetInput">Daily Savings Goal (₹)</label>
+                            <div class="input-with-button">
+                                <input type="number" id="savingsTargetInput" min="0" placeholder="e.g. 500" />
+                                <button id="saveTargetBtn" class="action-btn-sm">Set</button>
+                            </div>
+                        </div>
+
+                        <hr class="card-divider">
+
+                        <h3>Add Transaction</h3>
+                        <form id="moneyForm">
+                            <div class="input-group">
+                                <label for="txType">Type</label>
+                                <select id="txType">
+                                    <option value="expense">Expense (Spend)</option>
+                                    <option value="income">Income</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="txAmount">Amount (₹)</label>
+                                <input type="number" id="txAmount" min="1" placeholder="Amount" required />
+                            </div>
+                            <div class="input-group">
+                                <label for="txCategory">Category</label>
+                                <select id="txCategory">
+                                    <option value="Food & Drinks">Food & Drinks</option>
+                                    <option value="Travel & Commute">Travel & Commute</option>
+                                    <option value="Shopping & Entertainment">Shopping & Entertainment</option>
+                                    <option value="Bills & Rent">Bills & Rent</option>
+                                    <option value="Salary & Earnings">Salary & Earnings</option>
+                                    <option value="Freelance/Other Income">Freelance/Other Income</option>
+                                    <option value="Others">Others</option>
+                                </select>
+                            </div>
+                            <div class="input-group">
+                                <label for="txNotes">Notes</label>
+                                <input type="text" id="txNotes" placeholder="Description..." required />
+                            </div>
+                            <button type="submit" class="submit-btn">+ Add Transaction</button>
+                        </form>
+                    </div>
+
+                    <!-- Column 2: Transaction History -->
+                    <div class="glass-card flex-1.5">
+                        <div class="card-header-actions">
+                            <h3>Transactions List</h3>
+                            <button id="clearTransactionsBtn" class="btn-secondary">Clear Logs</button>
+                        </div>
+                        <div class="tx-list-container">
+                            <table class="tx-table">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Category</th>
+                                        <th>Notes</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="txTableBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Column 3: AI Money Advisor -->
+                    <div class="glass-card advisor-card">
+                        <div class="advisor-header">
+                            <span class="brain-icon">🧠</span>
+                            <h3>Aura Money Advisor</h3>
+                        </div>
+                        
+                        <div class="advisor-status-badge" id="advisorStatusBadge">
+                            Calculating...
+                        </div>
+                        
+                        <div class="advisor-content">
+                            <p class="advisor-intro">Reviewing your transactions against your daily savings goal...</p>
+                            <div class="advisor-speech" id="advisorText">
+                                Log some income or expenses to let the advisor analyze your savings efficiency.
+                            </div>
+                        </div>
+
+                        <div class="advisor-suggestions" id="advisorTipsList">
+                            <!-- Advisory bullet lists will appear here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen 4: Fitness Tracker -->
+            <section id="tab-fitness" class="tab-content">
+                <div class="content-grid">
+                    <!-- Left: Steps logger & Progress Ring -->
+                    <div class="glass-card centered-card">
+                        <h3>Daily Step Goal</h3>
+                        
+                        <div class="input-group" style="width: 100%; max-width: 250px;">
+                            <label for="stepGoalInput">Change Step Goal</label>
+                            <div class="input-with-button">
+                                <input type="number" id="stepGoalInput" value="10000" min="100" />
+                                <button id="saveStepGoalBtn" class="action-btn-sm">Save</button>
+                            </div>
+                        </div>
+
+                        <!-- Animated SVG Progress Ring -->
+                        <div class="progress-ring-container">
+                            <svg class="progress-ring" width="220" height="220">
+                                <circle class="progress-ring-bg" stroke="#1d2238" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
+                                <circle id="stepsProgressCircle" class="progress-ring-bar" stroke="url(#fitnessGrad)" stroke-width="12" stroke-linecap="round" fill="transparent" r="90" cx="110" cy="110"/>
+                                <defs>
+                                    <linearGradient id="fitnessGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#00f2fe"/>
+                                        <stop offset="100%" stop-color="#4facfe"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="progress-ring-text">
+                                <span class="ring-big-num" id="currentStepsCount">0</span>
+                                <span class="ring-sub" id="stepsGoalText">of 10,000 steps</span>
+                            </div>
+                        </div>
+
+                        <div class="quick-step-buttons">
+                            <button class="step-btn" data-add="500">+500 steps</button>
+                            <button class="step-btn" data-add="1000">+1000 steps</button>
+                            <button class="step-btn" data-add="5000">+5000 steps</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Fitness Analytics & Log Form -->
+                    <div class="glass-card flex-1.5">
+                        <h3>Fitness Analytics</h3>
+                        
+                        <div class="fitness-metrics-grid">
+                            <div class="fit-metric-card glass">
+                                <span class="fit-metric-emoji">🔥</span>
+                                <div class="fit-metric-info">
+                                    <h4 id="caloriesBurnedText">0 kcal</h4>
+                                    <p>Calories Burned</p>
+                                </div>
+                            </div>
+                            
+                            <div class="fit-metric-card glass">
+                                <span class="fit-metric-emoji">📍</span>
+                                <div class="fit-metric-info">
+                                    <h4 id="distanceTraveledText">0.00 km</h4>
+                                    <p>Distance Walked</p>
+                                </div>
+                            </div>
+                            
+                            <div class="fit-metric-card glass">
+                                <span class="fit-metric-emoji">📈</span>
+                                <div class="fit-metric-info">
+                                    <h4 id="stepPercentText">0%</h4>
+                                    <p>Goal Completion</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="card-divider">
+
+                        <h3>Log Steps Manually</h3>
+                        <form id="stepsForm">
+                            <div class="input-group">
+                                <label for="manualStepsInput">Add Steps Walked</label>
+                                <input type="number" id="manualStepsInput" placeholder="Enter step count (e.g. 3500)" min="1" required />
+                            </div>
+                            <button type="submit" class="submit-btn">+ Log Steps</button>
+                        </form>
+                        
+                        <button id="resetStepsBtn" class="btn-danger mt-12" style="width: 100%;">Reset Daily Step Log</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen 5: Habit Tracker -->
+            <section id="tab-habits" class="tab-content">
+                <div class="content-grid-3">
+                    
+                    <!-- Left: Create Habit Form -->
+                    <div class="glass-card">
+                        <h3>Create Daily Habit</h3>
+                        <p class="section-desc">Track routines and build consistency over the week.</p>
+                        
+                        <form id="habitForm">
+                            <div class="input-group">
+                                <label for="habitNameInput">Habit Title</label>
+                                <input type="text" id="habitNameInput" placeholder="e.g. Read Books, Drink 3L Water" required />
+                            </div>
+                            <div class="input-group">
+                                <label for="habitCategoryInput">Category</label>
+                                <select id="habitCategoryInput">
+                                    <option value="Health & Fitness">Health & Fitness</option>
+                                    <option value="Mind & Learning">Mind & Learning</option>
+                                    <option value="Work & Finance">Work & Finance</option>
+                                    <option value="Lifestyle">Lifestyle</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="submit-btn">+ Add Habit</button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Habit Progress Table -->
+                    <div class="glass-card flex-2">
+                        <div class="card-header-actions">
+                            <h3>Habit Board (Weekly Tracker)</h3>
+                            <span class="date-range-badge" id="habitWeekBadge">This Week</span>
+                        </div>
+                        
+                        <div class="habit-table-container">
+                            <table class="habit-table">
+                                <thead>
+                                    <tr>
+                                        <th>Habit</th>
+                                        <th>Mon</th>
+                                        <th>Tue</th>
+                                        <th>Wed</th>
+                                        <th>Thu</th>
+                                        <th>Fri</th>
+                                        <th>Sat</th>
+                                        <th>Sun</th>
+                                        <th>Streak</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="habitsTableBody">
+                                    <!-- Habits will be rendered here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Include app script -->
+    <script src="script.js"></script>
+</body>
+</html>
