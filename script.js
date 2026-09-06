@@ -1,11 +1,12 @@
 // ─── App State ──────────────────────────────────────────────
-let tasks = JSON.parse(localStorage.getItem("aura_tasks") || "[]");
-let dayPlan = JSON.parse(localStorage.getItem("aura_dayplan") || "[]");
-let transactions = JSON.parse(localStorage.getItem("aura_transactions") || "[]");
-let savingsTarget = Number(localStorage.getItem("aura_savings_target") || "500");
-let stepGoal = Number(localStorage.getItem("aura_step_goal") || "10000");
-let stepsWalked = Number(localStorage.getItem("aura_steps_walked") || "0");
-let habits = JSON.parse(localStorage.getItem("aura_habits") || "[]");
+let tasks = [];
+let dayPlan = [];
+let transactions = [];
+let savingsTarget = 500;
+let stepGoal = 10000;
+let stepsWalked = 0;
+let habits = [];
+let currentUser = null;
 
 let activeTab = "tab-tasks";
 let searchQuery = "";
@@ -158,13 +159,20 @@ document.body.addEventListener("click", () => {
 
 // ─── Persistence ────────────────────────────────────────────
 function saveState() {
-    localStorage.setItem("aura_tasks", JSON.stringify(tasks));
-    localStorage.setItem("aura_dayplan", JSON.stringify(dayPlan));
-    localStorage.setItem("aura_transactions", JSON.stringify(transactions));
-    localStorage.setItem("aura_savings_target", savingsTarget.toString());
-    localStorage.setItem("aura_step_goal", stepGoal.toString());
-    localStorage.setItem("aura_steps_walked", stepsWalked.toString());
-    localStorage.setItem("aura_habits", JSON.stringify(habits));
+    if (!currentUser) return;
+    try {
+        localStorage.setItem(`aura_data_${currentUser.uid}`, JSON.stringify({
+            aura_tasks: tasks,
+            aura_dayplan: dayPlan,
+            aura_transactions: transactions,
+            aura_savings_target: savingsTarget,
+            aura_step_goal: stepGoal,
+            aura_steps_walked: stepsWalked,
+            aura_habits: habits
+        }));
+    } catch (err) {
+        console.error("Error saving state:", err);
+    }
 }
 
 // ─── Tab Switching ──────────────────────────────────────────
@@ -1083,11 +1091,266 @@ function escapeHTML(str) {
               .replace(/'/g, "&#039;");
 }
 
+// ─── Theme System ─────────────────────────────────────────────
+function initTheme() {
+    const savedTheme = localStorage.getItem("aura_theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = savedTheme || (prefersDark ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    const newTheme = currentTheme === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("aura_theme", newTheme);
+    alarmSound.playShortPing();
+}
+
+// Listen for system theme changes
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+    if (!localStorage.getItem("aura_theme")) {
+        document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+    }
+});
+
+document.getElementById("themeToggleBtn").addEventListener("click", toggleTheme);
+
 // ─── Initialization ─────────────────────────────────────────
+initTheme();
 updateNotifBanner();
-renderTasks();
-renderDayPlan();
-renderTransactions();
-updateFitnessStats();
-renderHabits();
 updateClock();
+
+// ─── Authentication System ───────────────────────────────────
+// Self-contained, industry-style auth built on the Web Crypto API:
+//  - PBKDF2 (120,000 iterations, SHA-256) with random per-user salts
+//  - Password hashes only ever stored — never plaintext
+//  - Per-user data isolation (no cross-account leakage)
+//  - Persistent sessions with automatic expiry
+// Runs entirely client-side; no API keys or external backend required.
+
+const AUTH_USERS_KEY = "aura_auth_users";
+const AUTH_SESSION_KEY = "aura_auth_session";
+const AUTH_SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function getAuthUsers() {
+    try {
+        const raw = localStorage.getItem(AUTH_USERS_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+        console.error("Failed to read auth store:", err);
+        return [];
+    }
+}
+
+function setAuthUsers(users) {
+    localStorage.setItem(AUTH_USERS_KEY, JSON.stringify(users));
+}
+
+function toHex(bytes) {
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function fromHex(hex) {
+    return new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
+}
+
+async function generateSalt() {
+    return toHex(crypto.getRandomValues(new Uint8Array(16)));
+}
+
+async function hashPassword(password, saltHex) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        enc.encode(password),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+    );
+    const bits = await crypto.subtle.deriveBits(
+        { name: "PBKDF2", salt: fromHex(saltHex), iterations: 120000, hash: "SHA-256" },
+        keyMaterial,
+        256
+    );
+    return toHex(new Uint8Array(bits));
+}
+
+function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+const authModal = document.getElementById("authModal");
+const appDashboard = document.getElementById("appDashboard");
+const authForm = document.getElementById("authForm");
+const authTitle = document.getElementById("authTitle");
+const authSubmitBtn = document.getElementById("authSubmitBtn");
+const authToggleBtn = document.getElementById("authToggleBtn");
+const authToggleText = document.getElementById("authToggleText");
+const authError = document.getElementById("authError");
+const logoutBtn = document.getElementById("logoutBtn");
+
+let isSignUp = false;
+
+authToggleBtn.addEventListener("click", () => {
+    isSignUp = !isSignUp;
+    authTitle.textContent = isSignUp ? "Create Account" : "Welcome Back";
+    authSubmitBtn.textContent = isSignUp ? "Sign Up" : "Sign In";
+    authToggleText.textContent = isSignUp ? "Already have an account? " : "Don't have an account? ";
+    authToggleBtn.textContent = isSignUp ? "Sign In" : "Sign Up";
+    authError.textContent = "";
+    authForm.reset();
+});
+
+authForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("authEmail").value.trim().toLowerCase();
+    const password = document.getElementById("authPassword").value;
+
+    authError.textContent = "Loading...";
+
+    if (!isValidEmail(email)) {
+        authError.textContent = "Please enter a valid email address.";
+        return;
+    }
+
+    if (isSignUp && password.length < 8) {
+        authError.textContent = "Password must be at least 8 characters long.";
+        return;
+    }
+
+    if (!crypto.subtle) {
+        authError.textContent = "Secure login is unavailable in this browser. Use a modern browser.";
+        return;
+    }
+
+    try {
+        const users = getAuthUsers();
+        const existing = users.find(u => u.email === email);
+
+        if (isSignUp) {
+            if (existing) {
+                authError.textContent = "An account with this email already exists. Please sign in.";
+                return;
+            }
+            const salt = await generateSalt();
+            const hash = await hashPassword(password, salt);
+            users.push({
+                uid: "u_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10),
+                email: email,
+                salt: salt,
+                hash: hash,
+                createdAt: Date.now()
+            });
+            setAuthUsers(users);
+        } else {
+            if (!existing) {
+                authError.textContent = "No account found with this email. Please sign up first.";
+                return;
+            }
+            const hash = await hashPassword(password, existing.salt);
+            if (hash !== existing.hash) {
+                authError.textContent = "Incorrect password. Please try again.";
+                return;
+            }
+        }
+
+        startSession(getAuthUsers().find(u => u.email === email));
+    } catch (err) {
+        console.error("Authentication error:", err);
+        authError.textContent = "Something went wrong. Please try again.";
+    }
+});
+
+function startSession(user) {
+    localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        issuedAt: Date.now()
+    }));
+    showAuthenticatedApp(user);
+}
+
+function showAuthenticatedApp(user) {
+    currentUser = user;
+    authModal.classList.add("hidden");
+    appDashboard.classList.remove("app-hidden");
+    authForm.reset();
+    authError.textContent = "";
+    loadUserData(user.uid);
+}
+
+function showGuestView() {
+    currentUser = null;
+    localStorage.removeItem(AUTH_SESSION_KEY);
+    authModal.classList.remove("hidden");
+    appDashboard.classList.add("app-hidden");
+    authForm.reset();
+    authError.textContent = "";
+
+    tasks = [];
+    dayPlan = [];
+    transactions = [];
+    habits = [];
+    savingsTarget = 500;
+    stepGoal = 10000;
+    stepsWalked = 0;
+    renderAll();
+}
+
+function loadUserData(uid) {
+    try {
+        const raw = localStorage.getItem(`aura_data_${uid}`);
+        const data = raw ? JSON.parse(raw) : null;
+        if (data) {
+            tasks = data.aura_tasks || [];
+            dayPlan = data.aura_dayplan || [];
+            transactions = data.aura_transactions || [];
+            savingsTarget = data.aura_savings_target || 500;
+            stepGoal = data.aura_step_goal || 10000;
+            stepsWalked = data.aura_steps_walked || 0;
+            habits = data.aura_habits || [];
+        }
+    } catch (err) {
+        console.error("Failed to load user data:", err);
+    }
+    renderAll();
+}
+
+function renderAll() {
+    renderTasks();
+    renderDayPlan();
+    renderTransactions();
+    updateFitnessStats();
+    renderHabits();
+}
+
+if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => showGuestView());
+}
+
+// Restore a previously open session on page load
+(function restoreSession() {
+    if (!crypto.subtle) {
+        authError.textContent = "Secure login is unavailable in this browser. Use a modern browser.";
+        return;
+    }
+    try {
+        const raw = localStorage.getItem(AUTH_SESSION_KEY);
+        if (!raw) return;
+        const session = JSON.parse(raw);
+        if (Date.now() - session.issuedAt > AUTH_SESSION_TTL) {
+            localStorage.removeItem(AUTH_SESSION_KEY);
+            return;
+        }
+        const user = getAuthUsers().find(u => u.uid === session.uid);
+        if (!user) {
+            localStorage.removeItem(AUTH_SESSION_KEY);
+            return;
+        }
+        showAuthenticatedApp(user);
+    } catch (err) {
+        localStorage.removeItem(AUTH_SESSION_KEY);
+    }
+})();

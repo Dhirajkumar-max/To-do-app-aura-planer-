@@ -3,6 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070913">
+    <meta name="description" content="Aura Planner & Life Dashboard — tasks, day planner, finance, fitness, and habit tracking.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icons/icon-192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <title>Aura Planner & Life Dashboard</title>
     <!-- Modern Premium Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +17,34 @@
 </head>
 <body>
 
-    <!-- Alarm Overlay Modal -->
+    <!-- Auth Overlay Modal -->
+    <div id="authModal" class="modal-overlay auth-overlay">
+        <div class="modal-content glass pop-in auth-card">
+            <div class="brand auth-brand" style="justify-content: center; margin-bottom: 20px;">
+                <span class="brand-logo">✨</span>
+                <h1 class="brand-name">AURA</h1>
+            </div>
+            <h2 id="authTitle" style="text-align: center;">Welcome Back</h2>
+            <p class="auth-subtitle" style="text-align: center; color: var(--text-muted); margin-bottom: 20px;">Sign in to sync your life dashboard.</p>
+            
+            <form id="authForm" class="auth-form">
+                <div class="input-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" placeholder="you@example.com" required />
+                </div>
+                <div class="input-group">
+                    <label for="authPassword">Password</label>
+                    <input type="password" id="authPassword" placeholder="••••••••" required />
+                </div>
+                <button type="submit" id="authSubmitBtn" class="submit-btn" style="width: 100%; margin-top: 10px;">Sign In</button>
+            </form>
+            <div class="auth-toggle" style="text-align: center; margin-top: 20px;">
+                <span id="authToggleText" style="color: var(--text-muted);">Don't have an account? </span>
+                <button id="authToggleBtn" class="action-btn-sm" style="background: transparent; color: var(--primary);">Sign Up</button>
+            </div>
+            <p id="authError" class="auth-error" style="color: var(--danger); text-align: center; margin-top: 15px; min-height: 20px; font-size: 14px;"></p>
+        </div>
+    </div>    <!-- Alarm Overlay Modal -->
     <div id="alarmModal" class="modal-overlay hidden">
         <div class="modal-content glass pop-in">
             <div class="modal-header">
@@ -31,7 +63,7 @@
     </div>
 
     <!-- Main Dashboard Container -->
-    <div class="dashboard-container">
+    <div id="appDashboard" class="dashboard-container app-hidden">
         
         <!-- Sidebar Navigation -->
         <aside class="sidebar glass">
@@ -64,6 +96,8 @@
                     <p id="notifText">Enable notifications for background alerts.</p>
                     <button id="enableNotifBtn" class="action-btn-sm">Enable</button>
                 </div>
+                
+                <button id="logoutBtn" class="btn-secondary" style="width: 100%; margin-top: 15px; justify-content: center;">🚪 Sign Out</button>
             </div>
         </aside>
 
@@ -77,6 +111,7 @@
                     <p id="headerDateString" class="header-date">Wednesday, July 1</p>
                 </div>
                 <div class="header-right">
+                    <button id="themeToggleBtn" class="action-btn-sm" title="Toggle Theme" style="margin-right: 15px; border-radius: 50%; padding: 8px;">🌓</button>
                     <div class="live-clock" id="liveClock">22:05:00</div>
                     <button id="primeAudioBtn" class="audio-prime-btn" title="Enable Alarm Sound System">🔊 Audio Ready</button>
                 </div>
@@ -527,7 +562,18 @@
         </main>
     </div>
 
-    <!-- Include app script -->
+    <!-- App script -->
     <script src="script.js"></script>
+
+    <!-- Register service worker for PWA / offline support -->
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("sw.js").catch(err => {
+                    console.error("[PWA] Service worker registration failed:", err);
+                });
+            });
+        }
+    </script>
 </body>
 </html>
