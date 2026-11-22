@@ -1,5 +1,7 @@
 # Aura Planner & Life Dashboard
 
+try it once , live demo : https://effervescent-shortbread-e35b3c.netlify.app/
+
 > A sophisticated, all-in-one personal productivity dashboard built with vanilla HTML, CSS, and JavaScript. Features task management, daily planning, finance tracking, fitness monitoring, and habit building—all in a beautiful glassmorphism interface.
 
 ![Aura Dashboard Preview](https://img.shields.io/badge/Status-Active-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue) ![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-yellow) ![CSS3](https://img.shields.io/badge/CSS3-Glassmorphism-purple)
